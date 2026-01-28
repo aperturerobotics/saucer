@@ -198,8 +198,9 @@ namespace saucer
         [[sc::thread_safe]] void remove_scheme(const std::string &name);
 
       public:
+        // Streaming scheme support (Added for prototype 04-streaming-scheme)
+        // Provides a stream_writer to the handler for incremental data writes
         [[sc::thread_safe]] void handle_stream_scheme(const std::string &name, scheme::stream_resolver &&handler);
-        [[sc::thread_safe]] void remove_stream_scheme(const std::string &name);
 
       public:
         template <event Event>

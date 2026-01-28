@@ -5,6 +5,10 @@
 using namespace saucer;
 using namespace saucer::scheme;
 
+// ==================================================================================
+// Streaming scheme support (Added for prototype 04-streaming-scheme)
+// ==================================================================================
+
 stream_writer::stream_writer(std::shared_ptr<impl> impl) : m_impl(std::move(impl)) {}
 
 stream_writer::stream_writer(const stream_writer &) = default;
@@ -20,6 +24,7 @@ void stream_writer::start(const stream_response &response)
         return;
     }
 
+    // Capture task reference while holding lock, then release before dispatching
     task_ref task_copy;
     {
         auto tasks = m_impl->tasks->write();
@@ -31,10 +36,12 @@ void stream_writer::start(const stream_response &response)
         task_copy = tasks->at(m_impl->handle);
     }
 
+    // Copy response data for the block
     auto mime_copy    = response.mime;
     auto headers_copy = response.headers;
     auto status_copy  = response.status;
 
+    // Dispatch to main thread - WebKit requires this
     dispatch_async(dispatch_get_main_queue(), ^{
         const utils::autorelease_guard guard{};
 
@@ -60,6 +67,7 @@ void stream_writer::start(const stream_response &response)
         }
         @catch (NSException *)
         {
+            // Task was cancelled
         }
     });
 }
@@ -71,6 +79,7 @@ void stream_writer::write(stash data)
         return;
     }
 
+    // Capture task reference while holding lock
     task_ref task_copy;
     {
         auto tasks = m_impl->tasks->read();
@@ -81,8 +90,10 @@ void stream_writer::write(stash data)
         task_copy = tasks->at(m_impl->handle);
     }
 
+    // Copy data for the block
     auto data_copy = std::vector<std::uint8_t>(data.data(), data.data() + data.size());
 
+    // Dispatch to main thread - WebKit requires this
     dispatch_async(dispatch_get_main_queue(), ^{
         const utils::autorelease_guard guard{};
 
@@ -95,6 +106,7 @@ void stream_writer::write(stash data)
         }
         @catch (NSException *)
         {
+            // Task was cancelled
         }
     });
 }
@@ -106,6 +118,7 @@ void stream_writer::finish()
         return;
     }
 
+    // Capture task reference and remove from map while holding lock
     task_ref task_copy;
     {
         auto tasks = m_impl->tasks->write();
@@ -117,6 +130,7 @@ void stream_writer::finish()
         tasks->erase(m_impl->handle);
     }
 
+    // Dispatch to main thread - WebKit requires this
     dispatch_async(dispatch_get_main_queue(), ^{
         const utils::autorelease_guard guard{};
 
@@ -126,6 +140,7 @@ void stream_writer::finish()
         }
         @catch (NSException *)
         {
+            // Task was cancelled
         }
     });
 }
@@ -137,6 +152,7 @@ void stream_writer::reject(error err)
         return;
     }
 
+    // Capture task reference and remove from map while holding lock
     task_ref task_copy;
     {
         auto tasks = m_impl->tasks->write();
@@ -150,6 +166,7 @@ void stream_writer::reject(error err)
 
     auto err_code = std::to_underlying(err);
 
+    // Dispatch to main thread - WebKit requires this
     dispatch_async(dispatch_get_main_queue(), ^{
         const utils::autorelease_guard guard{};
 
@@ -161,6 +178,7 @@ void stream_writer::reject(error err)
         }
         @catch (NSException *)
         {
+            // Task was cancelled
         }
     });
 }
@@ -176,12 +194,15 @@ bool stream_writer::valid() const
     return tasks->contains(m_impl->handle) && !m_impl->finished;
 }
 
+// ==================================================================================
+
 @implementation SchemeHandler
 - (void)add_callback:(saucer::scheme::resolver)callback webview:(WKWebView *)instance
 {
     m_callbacks.emplace(instance, std::move(callback));
 }
 
+// Streaming scheme support (Added for prototype 04-streaming-scheme)
 - (void)add_stream_callback:(saucer::scheme::stream_resolver)callback webview:(WKWebView *)instance
 {
     m_stream_callbacks.emplace(instance, std::move(callback));
@@ -197,6 +218,7 @@ bool stream_writer::valid() const
 {
     const utils::autorelease_guard guard{};
 
+    // Check for streaming callback first (Added for prototype 04-streaming-scheme)
     if (self->m_stream_callbacks.contains(instance))
     {
         auto ref = task_ref::ref(task);

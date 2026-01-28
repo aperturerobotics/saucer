@@ -95,7 +95,6 @@ namespace saucer
 
       public:
         void remove_scheme(const std::string &);
-        void remove_stream_scheme(const std::string &);
         static void register_scheme(const std::string &);
 
       public:

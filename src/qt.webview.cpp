@@ -391,15 +391,11 @@ namespace saucer
         platform->web_view->page()->profile()->installUrlSchemeHandler(QByteArray::fromStdString(name), &scheme);
     }
 
-    void impl::handle_stream_scheme(const std::string &name, scheme::stream_resolver &&resolver) // NOLINT(*-function-const)
+    // Streaming scheme support (Added for prototype 04-streaming-scheme)
+    // TODO: Implement streaming for Qt
+    void impl::handle_stream_scheme(const std::string &, scheme::stream_resolver &&) // NOLINT(*-function-const)
     {
-        if (platform->stream_schemes.contains(name))
-        {
-            return;
-        }
-
-        auto &scheme = platform->stream_schemes.emplace(name, std::move(resolver)).first->second;
-        platform->web_view->page()->profile()->installUrlSchemeHandler(QByteArray::fromStdString(name), &scheme);
+        // Not implemented for Qt yet
     }
 
     void impl::remove_scheme(const std::string &name) // NOLINT(*-function-const)
@@ -413,19 +409,6 @@ namespace saucer
 
         platform->web_view->page()->profile()->removeUrlSchemeHandler(&it->second);
         platform->schemes.erase(it);
-    }
-
-    void impl::remove_stream_scheme(const std::string &name) // NOLINT(*-function-const)
-    {
-        const auto it = platform->stream_schemes.find(name);
-
-        if (it == platform->stream_schemes.end())
-        {
-            return;
-        }
-
-        platform->web_view->page()->profile()->removeUrlSchemeHandler(&it->second);
-        platform->stream_schemes.erase(it);
     }
 
     void impl::register_scheme(const std::string &name)

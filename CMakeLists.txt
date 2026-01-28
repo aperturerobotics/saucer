@@ -11,6 +11,7 @@ option(saucer_exceptions       "Enable exception support (Respects -fno-exceptio
 
 option(saucer_examples         "Build examples"                                                      OFF)
 option(saucer_tests            "Build tests"                                                         OFF)
+option(saucer_prototypes       "Build I/O prototypes"                                                OFF)
 
 option(saucer_msvc_hack        "Fix mutex crash on mismatching runtimes. See VS2022 17.10 changelog" OFF)
 option(saucer_unexpected_hack  "Fix std::unexpected ambiguity issues when compiling with zig"        OFF)
@@ -456,6 +457,15 @@ if (saucer_examples)
   add_subdirectory("examples/expose")
   add_subdirectory("examples/loop")
   add_subdirectory("examples/pdf")
+endif()
+
+# +-------------------------------------------------------------------------------------------------------+
+# | Setup Prototypes                                                                                      |
+# +-------------------------------------------------------------------------------------------------------+
+
+if (saucer_prototypes)
+  saucer_message(STATUS "Building Prototypes")
+  add_subdirectory("prototypes")
 endif()
 
 # +-------------------------------------------------------------------------------------------------------+
