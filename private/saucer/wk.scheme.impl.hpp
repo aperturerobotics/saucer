@@ -15,6 +15,17 @@ namespace saucer::scheme
     {
         task_ref task;
     };
+
+    struct executor::impl
+    {
+        std::function<void(const response &)> resolve;
+        std::function<void(error)> reject;
+        task_ref task;
+        lockpp::lock<std::unordered_map<NSUInteger, task_ref>> *tasks{nullptr};
+        NSUInteger handle{0};
+        std::atomic<bool> started{false};
+        std::atomic<bool> finished{false};
+    };
 } // namespace saucer::scheme
 
 @interface SchemeHandler : NSObject <WKURLSchemeHandler>

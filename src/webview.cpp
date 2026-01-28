@@ -81,24 +81,23 @@ namespace saucer
 
     void webview::impl::handle_embed(const scheme::request &request, const scheme::executor &exec)
     {
-        const auto &[resolve, reject] = exec;
-        const auto url                = request.url();
+        const auto url = request.url();
 
         if (url.scheme() != "saucer" || url.host() != "embedded")
         {
-            return reject(scheme::error::invalid);
+            return exec.reject(scheme::error::invalid);
         }
 
         const auto file = url.path();
 
         if (!embedded.contains(file))
         {
-            return reject(scheme::error::not_found);
+            return exec.reject(scheme::error::not_found);
         }
 
         const auto &data = embedded.at(file);
 
-        return resolve({
+        return exec.resolve({
             .data    = data.content,
             .mime    = data.mime,
             .headers = {{"Access-Control-Allow-Origin", "*"}},

@@ -13,6 +13,16 @@ namespace saucer::scheme
         utils::g_object_ptr<WebKitURISchemeRequest> request;
     };
 
+    struct executor::impl
+    {
+        std::function<void(const response &)> resolve;
+        std::function<void(error)> reject;
+        utils::g_object_ptr<WebKitURISchemeRequest> request;
+        int write_fd{-1};
+        std::atomic<bool> started{false};
+        std::atomic<bool> finished{false};
+    };
+
     class handler
     {
         std::unordered_map<WebKitWebView *, scheme::resolver> m_callbacks;

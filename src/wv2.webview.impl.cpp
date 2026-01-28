@@ -435,8 +435,40 @@ namespace saucer
             return status;
         }
 
-        auto resolve = [environment, deferral, request = opts.raw](const scheme::response &response)
+        auto *buffer   = new scheme::stream_buffer();
+        auto exec_impl = std::make_shared<scheme::executor::impl>();
+
+        exec_impl->args        = opts.raw;
+        exec_impl->deferral    = deferral;
+        exec_impl->environment = environment;
+        exec_impl->buffer      = buffer;
+
+        std::weak_ptr<scheme::executor::impl> weak_impl = exec_impl;
+
+        auto forward = [self]<typename T>(T &&callback)
         {
+            return [self, callback = std::forward<T>(callback)]<typename... Ts>(Ts &&...args) mutable
+            {
+                self->parent->post(utils::defer(self->platform->lease,
+                                                [callback = std::forward<T>(callback), ... args = std::forward<Ts>(args)](auto *) mutable
+                                                { callback(std::forward<Ts>(args)...); }));
+            };
+        };
+
+        exec_impl->resolve = forward([environment, deferral, request = opts.raw, weak_impl](const scheme::response &response)
+        {
+            auto impl = weak_impl.lock();
+            if (!impl)
+            {
+                return;
+            }
+
+            // Prevent resolve after streaming started or already finished
+            if (impl->started || impl->finished.exchange(true))
+            {
+                return;
+            }
+
             const auto *raw = reinterpret_cast<const BYTE *>(response.data.data());
             const auto size = static_cast<const UINT>(response.data.size());
 
@@ -455,10 +487,22 @@ namespace saucer
 
             request->put_Response(result.Get());
             deferral->Complete();
-        };
+        });
 
-        auto reject = [environment, deferral, request = opts.raw](const scheme::error &error)
+        exec_impl->reject = forward([environment, deferral, request = opts.raw, weak_impl](const scheme::error &error)
         {
+            auto impl = weak_impl.lock();
+            if (!impl)
+            {
+                return;
+            }
+
+            // Prevent reject if already finished
+            if (impl->finished.exchange(true))
+            {
+                return;
+            }
+
             auto status = std::to_underlying(error);
             std::wstring phrase;
 
@@ -484,24 +528,14 @@ namespace saucer
 
             request->put_Response(result.Get());
             deferral->Complete();
-        };
-
-        auto forward = [self]<typename T>(T &&callback)
-        {
-            return [self, callback = std::forward<T>(callback)]<typename... Ts>(Ts &&...args) mutable
-            {
-                self->parent->post(utils::defer(self->platform->lease,
-                                                [callback = std::forward<T>(callback), ... args = std::forward<Ts>(args)](auto *) mutable
-                                                { callback(std::forward<Ts>(args)...); }));
-            };
-        };
+        });
 
         auto &resolver = scheme->second;
 
-        auto req      = scheme::request{{.request = opts.request, .body = content}};
-        auto executor = scheme::executor{forward(std::move(resolve)), forward(std::move(reject))};
+        auto req  = scheme::request{{.request = opts.request, .body = content}};
+        auto exec = scheme::executor{exec_impl};
 
-        resolver(std::move(req), std::move(executor));
+        resolver(std::move(req), std::move(exec));
 
         return S_OK;
     }

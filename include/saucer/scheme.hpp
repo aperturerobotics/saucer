@@ -56,6 +56,37 @@ namespace saucer::scheme
         [[nodiscard]] std::map<std::string, std::string> headers() const;
     };
 
-    using executor = saucer::executor<response, error>;
+    struct stream_response
+    {
+        std::string mime;
+        std::map<std::string, std::string> headers;
+        int status{200};
+    };
+
+    class executor
+    {
+      public:
+        struct impl;
+
+      private:
+        std::shared_ptr<impl> m_impl;
+
+      public:
+        executor(std::shared_ptr<impl>);
+        executor(const executor &);
+        executor(executor &&) noexcept;
+        ~executor();
+
+      public:
+        void resolve(const response &) const;
+        void reject(error) const;
+
+      public:
+        void start(const stream_response &);
+        void write(stash data);
+        void finish();
+        [[nodiscard]] bool streaming() const;
+    };
+
     using resolver = std::function<void(request, executor)>;
 } // namespace saucer::scheme

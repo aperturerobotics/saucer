@@ -9,10 +9,22 @@
 
 namespace saucer::scheme
 {
+    class stream_device;
+
     struct request::impl
     {
         std::shared_ptr<lockpp::lock<QWebEngineUrlRequestJob *>> request;
         QByteArray body;
+    };
+
+    struct executor::impl
+    {
+        std::function<void(const response &)> resolve;
+        std::function<void(error)> reject;
+        std::shared_ptr<lockpp::lock<QWebEngineUrlRequestJob *>> request;
+        stream_device *device{nullptr};
+        std::atomic<bool> started{false};
+        std::atomic<bool> finished{false};
     };
 
     class handler : public QWebEngineUrlSchemeHandler
