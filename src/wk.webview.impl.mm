@@ -198,6 +198,8 @@ namespace saucer
         id pool               = resolve(config, @"processPool");
         auto *const secure    = @selector(_registerURLSchemeAsSecure:);
         const auto can_secure = pool && [pool respondsToSelector:secure];
+        auto *const cors      = @selector(_registerURLSchemeAsCORSEnabled:);
+        const auto can_cors   = pool && [pool respondsToSelector:cors];
 #endif
 
         for (const auto &[name, handler] : schemes)
@@ -208,6 +210,10 @@ namespace saucer
             if (can_secure)
             {
                 [pool performSelector:secure withObject:scheme];
+            }
+            if (can_cors)
+            {
+                [pool performSelector:cors withObject:scheme];
             }
 #endif
 
