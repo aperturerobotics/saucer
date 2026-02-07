@@ -1,5 +1,7 @@
 #pragma once
 
+#include <atomic>
+
 #include <saucer/scheme.hpp>
 
 #include "gtk.utils.hpp"
