@@ -95,7 +95,7 @@ namespace saucer
         platform->web_view   = std::move(web_view);
         platform->lease      = utils::lease<webview::impl *>{this};
 
-        if (!opts.storage_path.has_value() && !opts.persistent_cookies)
+        if (opts.non_persistent_data_store || (!opts.storage_path.has_value() && !opts.persistent_cookies))
         {
             platform->cleanup = *storage_path;
             platform->web_view->get_BrowserProcessId(&platform->browser_pid);

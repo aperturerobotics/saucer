@@ -21,7 +21,6 @@ namespace saucer
     {
         platform = std::make_unique<native>();
 
-        platform->web_view = WEBKIT_WEB_VIEW(webkit_web_view_new());
         platform->settings = native::make_settings(opts);
 
         const auto acceleration = opts.hardware_acceleration ? WEBKIT_HARDWARE_ACCELERATION_POLICY_ALWAYS //
@@ -34,6 +33,17 @@ namespace saucer
             webkit_settings_set_user_agent(platform->settings.get(), opts.user_agent->c_str());
         }
 
+        if (opts.non_persistent_data_store)
+        {
+            auto *const session = webkit_network_session_new_ephemeral();
+            platform->web_view  = WEBKIT_WEB_VIEW(g_object_new(WEBKIT_TYPE_WEB_VIEW, "network-session", session, nullptr));
+            g_object_unref(session);
+        }
+        else
+        {
+            platform->web_view = WEBKIT_WEB_VIEW(webkit_web_view_new());
+        }
+
         webkit_web_view_set_settings(platform->web_view, platform->settings.get());
 
         auto *const session      = webkit_web_view_get_network_session(platform->web_view);
@@ -41,7 +51,7 @@ namespace saucer
 
         webkit_website_data_manager_set_favicons_enabled(data_manager, true);
 
-        if (opts.persistent_cookies)
+        if (opts.persistent_cookies && !opts.non_persistent_data_store)
         {
             auto *const manager = webkit_network_session_get_cookie_manager(session);
             auto path           = opts.storage_path.value_or(fs::current_path() / ".saucer");

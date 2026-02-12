@@ -48,14 +48,15 @@ namespace saucer
 
         qputenv("QTWEBENGINE_CHROMIUM_FLAGS", arguments.c_str());
 
-        auto profile = std::make_unique<QWebEngineProfile>("saucer");
+        auto profile = opts.non_persistent_data_store ? std::make_unique<QWebEngineProfile>()
+                                                      : std::make_unique<QWebEngineProfile>("saucer");
 
         if (opts.user_agent.has_value())
         {
             profile->setHttpUserAgent(QString::fromStdString(*opts.user_agent));
         }
 
-        if (opts.storage_path.has_value())
+        if (!opts.non_persistent_data_store && opts.storage_path.has_value())
         {
             const auto path = QString::fromStdString(opts.storage_path->string());
 
@@ -66,7 +67,10 @@ namespace saucer
         using enum QWebEngineProfile::PersistentPermissionsPolicy;
         profile->setPersistentPermissionsPolicy(AskEveryTime);
 
-        profile->setPersistentCookiesPolicy(opts.persistent_cookies ? ForcePersistentCookies : NoPersistentCookies);
+        if (!opts.non_persistent_data_store)
+        {
+            profile->setPersistentCookiesPolicy(opts.persistent_cookies ? ForcePersistentCookies : NoPersistentCookies);
+        }
         profile->settings()->setAttribute(QWebEngineSettings::LocalContentCanAccessRemoteUrls, true);
         profile->settings()->setAttribute(QWebEngineSettings::FullScreenSupportEnabled, true);
 
