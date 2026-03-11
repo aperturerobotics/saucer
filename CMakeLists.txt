@@ -453,6 +453,7 @@ if (saucer_examples)
   add_subdirectory("examples/expose")
   add_subdirectory("examples/loop")
   add_subdirectory("examples/pdf")
+  add_subdirectory("examples/scheme-deadlock")
 endif()
 
 # +-------------------------------------------------------------------------------------------------------+
